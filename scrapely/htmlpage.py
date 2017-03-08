@@ -5,28 +5,38 @@ Container objects for representing html pages and their parts in the IBL
 system. This encapsulates page related information and prevents parsing
 multiple times.
 """
-import re
 import hashlib
-import six
-import requests
-
-from six.moves.urllib.request import urlopen
+import re
 from copy import deepcopy
-from w3lib.encoding import html_to_unicode
+
+import requests
+import six
+
+# TODO: The next two lines for development only, remove it before production.
+import pyximport
+pyximport.install()
+from . import _htmlpage
+
+parse_html = _htmlpage.parse_html
+HtmlDataFragment = _htmlpage.HtmlDataFragment
+HtmlTag = _htmlpage.HtmlTag
+HtmlTagType = _htmlpage.HtmlTagType
 
 
 def url_to_page(url, encoding=None, default_encoding='utf-8'):
-    """Fetch a URL, using python urllib2, and return an HtmlPage object.
+    """Fetch a URL, using python urllib, and return an HtmlPage object.
 
-    The `url` may be a string, or a `urllib2.Request` object. The `encoding`
-    argument can be used to force the interpretation of the page encoding.
+    The `url` may be a string, or a `urllib.request.Request` object. The
+    `encoding` argument can be used to force the interpretation of the page
+    encoding.
 
-    Redirects are followed, and the `url` property of the returned HtmlPage object
-    is the url of the final page redirected to.
+    Redirects are followed, and the `url` property of the returned HtmlPage
+    object is the url of the final page redirected to.
 
-    If the encoding of the page is known, it can be passed as a keyword argument. If
-    unspecified, the encoding is guessed using `w3lib.encoding.html_to_unicode`.
-    `default_encoding` is used if the encoding cannot be determined.
+    If the encoding of the page is known, it can be passed as a keyword
+    argument. If unspecified, the encoding is guessed using
+    `w3lib.encoding.html_to_unicode`. `default_encoding` is used if the
+    encoding cannot be determined.
     """
     # TODO : encoding argument is deprecated we should remote it in the future
     try:
@@ -37,6 +47,20 @@ def url_to_page(url, encoding=None, default_encoding='utf-8'):
     headers = url_request.headers
     encoding = url_request.encoding
     return HtmlPage(url_request.url, headers=dict(headers), body=body, encoding=encoding)
+
+
+def scrapy_response_to_page(scrapy_response):
+    """
+    Create an HtmlPage from Scrapy response given. This should only used when integrating with
+    scrapy projects. Motivation for this, when you're manipulating the request headers from a
+    scrapy project, the response may be different form the one obtained from url_to_page funtion.
+    :param scrapy_response: scrapy.http.Response object
+    :return: HtmlPage instance created.
+    """
+    body = unicode(scrapy_response.body,"utf-8")
+    headers = scrapy_response.headers
+    encoding = scrapy_response.encoding
+    return HtmlPage(scrapy_response.url, headers=dict(headers), body=body, encoding=encoding)
 
 
 def xml_to_page(url, xml, encoding='utf-8'):
@@ -194,7 +218,7 @@ class HtmlPageParsedRegion(HtmlPageRegion):
         text_all = u" ".join(self.htmlpage.body[_element.start:_element.end] \
                              for _element in self.parsed_fragments if \
                              not isinstance(_element, HtmlTag) and _element.is_text_content)
-        return TextPage(self.htmlpage.url, self.htmlpage.headers, \
+        return TextPage(self.htmlpage.url, self.htmlpage.headers,
                         text_all, encoding=self.htmlpage.encoding).subregion()
 
 
@@ -230,10 +254,10 @@ class HtmlTag(HtmlDataFragment):
 
     def __str__(self):
         return "<HtmlTag tag='%s' attributes={%s} type='%d' [%s:%s]>" % (self.tag, ', '.join(sorted(["%s: %s" % (
-                                                                                             k, repr(v)) for
-                                                                                           k, v in
-                                                                                           self.attributes.items()])),
-                                                                 self.tag_type, self.start, self.end)
+            k, repr(v)) for
+                                                                                                     k, v in
+                                                                                                     self.attributes.items()])),
+                                                                         self.tag_type, self.start, self.end)
 
     def __repr__(self):
         return str(self)
