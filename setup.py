@@ -21,7 +21,7 @@ setup(
     description='A pure-python HTML screen-scraping library',
     author='Scrapy project',
     author_email='info@scrapy.org',
-    url='https://github.com/scrapy/scrapely',
+    url='https://github.com/flyingelephantlab/scrapely',
     packages=find_packages(exclude=['tests', 'tests.*']),
     include_package_data=True,
     zip_safe=False,
